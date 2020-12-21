@@ -16,7 +16,7 @@ isWellFounded {a} lessThan =
     isNonempty p ->
     -- a proof that the given subset has no smallest element
     isUnboundedBelow lessThan p ->
-    -- we get a proof of void.
+    -- return a proof of void.
     Void
 
 isTransitive : (a -> a -> Type) -> Type
@@ -84,6 +84,13 @@ parameters (wqo : Omega, x : Set wqo)
     sdsAsOmega : Omega
     sdsAsOmega = (StrictDownSet ** ltSDS ** (wfSDS, transSDS))
 
+record WqoMapping (wqo1 : Omega) (wqo2 : Omega) where
+    constructor MkWqoMapping
+    mapping : Set wqo1 -> Set wqo2
+    upperBound : Set wqo2
+    orderPreserved : (x, y : Set wqo1) -> order wqo1 x y -> order wqo2 (mapping x) (mapping y)
+    bounded : (x : Set wqo1) -> order wqo2 (mapping x) upperBound
+
 -- A binary relation for well-quasi-orderings
 --
 -- (a, <_a) < (b, <_b) if there is an order preserving function from a to b
@@ -98,6 +105,79 @@ LTOmega (a ** lta ** _) (b ** ltb ** _) =
        , (x : a) -> ltb (f x) z
        )
     )
+
+LTOmega2 : Omega -> Omega -> Type
+LTOmega2 = WqoMapping
+
+parameters (p : Omega -> Type, prf1 : isNonempty p, prf2 : isUnboundedBelow LTOmega2 p)
+    wqo : Omega
+    wqo = fst prf1
+
+    wqo_is_in_P : p wqo
+    wqo_is_in_P = snd prf1
+
+    restrictPred : Set wqo -> Type
+    -- there is a well-quasi-ordering in the given subset which is less than the
+    -- strict down set of x
+    restrictPred x = (wqo' : Omega ** (p wqo', LTOmega2 wqo' (sdsAsOmega wqo x)))
+
+    below_wqo : Omega
+    below_wqo = fst (prf2 wqo wqo_is_in_P)
+
+    below_wqo_is_in_P : p below_wqo
+    below_wqo_is_in_P = fst (snd (prf2 wqo wqo_is_in_P))
+
+    below_wqo_is_less_than_wqo : LTOmega2 below_wqo wqo
+    below_wqo_is_less_than_wqo = snd (snd (prf2 wqo wqo_is_in_P))
+
+    mapping_below_wqo_to_wqo : Set below_wqo -> Set wqo
+    mapping_below_wqo_to_wqo = mapping below_wqo_is_less_than_wqo
+
+    below_below_wqo : Omega
+    below_below_wqo = fst (prf2 below_wqo below_wqo_is_in_P)
+
+    below_below_wqo_is_in_P : p below_below_wqo
+    below_below_wqo_is_in_P = fst (snd (prf2 below_wqo below_wqo_is_in_P))
+
+    below_below_wqo_is_less_than_below_wqo : LTOmega2 below_below_wqo below_wqo
+    below_below_wqo_is_less_than_below_wqo = snd (snd (prf2 below_wqo below_wqo_is_in_P))
+
+    mapping_below_below_wqo_to_below_wqo : Set below_below_wqo -> Set below_wqo
+    mapping_below_below_wqo_to_below_wqo = mapping below_below_wqo_is_less_than_below_wqo
+
+    upper_bound_in_wqo : Set wqo
+    upper_bound_in_wqo = upperBound below_wqo_is_less_than_wqo
+
+    upper_bound_for_below_below_wqo : Omega
+    upper_bound_for_below_below_wqo = sdsAsOmega wqo upper_bound_in_wqo
+
+    mapping_below_below_wqo_to_wqo : Set below_below_wqo -> Set wqo
+    mapping_below_below_wqo_to_wqo = mapping_below_wqo_to_wqo . mapping_below_below_wqo_to_below_wqo
+
+    less_than_upper_bound_in_wqo : (x : Set below_below_wqo) -> order wqo (mapping_below_below_wqo_to_wqo x) upper_bound_in_wqo
+    less_than_upper_bound_in_wqo x = bounded below_wqo_is_less_than_wqo (mapping_below_below_wqo_to_below_wqo x)
+
+    mapping_below_below_wqo_to_upper_bound : Set below_below_wqo -> Set upper_bound_for_below_below_wqo
+    mapping_below_below_wqo_to_upper_bound x = (mapping_below_below_wqo_to_wqo x ** less_than_upper_bound_in_wqo x)
+
+    upper_bound_in_upper_bound_for_below_below_wqo : Set upper_bound_for_below_below_wqo
+    upper_bound_in_upper_bound_for_below_below_wqo =
+        (mapping_below_wqo_to_wqo (upperBound below_below_wqo_is_less_than_below_wqo) ** bounded below_wqo_is_less_than_wqo (upperBound below_below_wqo_is_less_than_below_wqo))
+
+
+
+
+
+    --embedding : Set wqo -> Set upper_bound_for_below_below_wqo
+    --embedding =
+
+
+
+    --below_below_wqoLTSDSofX : LTOmega2 below_below_wqo (sdsAsOmega wf
+
+    -- (wqo1 ** (wqo1 is in P, wqo1 < wqo))
+    -- (wqo2 ** (wqo2 is in P, wqo2 < wqo1))
+    -- (y ** (wqo2 ** (wqo2 is in P, wqo2 < down set of y)))
 
 LTOmegaIsWellFounded : isWellFounded LTOmega
 LTOmegaIsWellFounded p ((a ** ltA ** (wfA, tA)) ** pwf) getSmaller =
@@ -143,6 +223,27 @@ LTOmegaIsTransitive
 
 OmegaAsOmega : Omega
 OmegaAsOmega = (Omega ** LTOmega ** (LTOmegaIsWellFounded, LTOmegaIsTransitive))
+
+OmegaAsOmega2 : Omega
+OmegaAsOmega2 = (Omega ** LTOmega2 ** (prf1, prf2)) where
+    prf1 : isWellFounded LTOmega2
+    prf1 = ?h1
+    prf2 : isTransitive LTOmega2
+    prf2 = ?h2
+
+any_omega_less_than_Omega : (wqo : Omega) -> LTOmega2 wqo OmegaAsOmega2
+any_omega_less_than_Omega wqo = MkWqoMapping (sdsAsOmega wqo) wqo order_preserved_prf bounded_by_wqo where
+    order_preserved_prf x y xLTy = MkWqoMapping g (x ** xLTy) order_preserved_by_g bounded_by_x where
+        g : StrictDownSet wqo x -> StrictDownSet wqo y
+        g (z ** zLTx) = (z ** transPrf wqo z x y zLTx xLTy)
+        order_preserved_by_g (u ** _) (v ** _) p = p
+        bounded_by_x (u ** uLTx) = uLTx
+    bounded_by_wqo x = MkWqoMapping g x order_preserved_by_g bounded_by_x where
+        g : StrictDownSet wqo x -> Set wqo
+        g (y ** _) = y
+        order_preserved_by_g (y ** _) (z ** _) p = p
+        bounded_by_x (y ** yLTx) = yLTx
+
 
 anyLTOmega : (wf : Omega) -> LTOmega wf OmegaAsOmega
 anyLTOmega (a ** ltA ** (wfA, transA)) = (sdsAsOmega wf ** wf ** (ordPreserved, ltWF)) where
