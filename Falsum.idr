@@ -1,4 +1,4 @@
-module Falsum2
+module Falsum
 
 %default total
 
@@ -244,11 +244,6 @@ wf_prf_LTN p ((set_a ** ltn_a ** (tran_prf_a, wf_prf_a)) ** p_a) no_lb_prf =
 --
 -- The well-quasi-ordering of well-quasi-orderings
 --
--- This is where I think the really interesting part of the proof comes in.
--- Somehow this is not circular because `Omega_as_Omega` is of a type higher in
--- the heirarchy than the arguments it takes. But the system does not seem to
--- recognize that this higher position is not finite.
---
 Omega_as_Omega : Omega
 Omega_as_Omega = (Omega ** LTN ** (tran_prf_LTN, wf_prf_LTN))
 
@@ -290,6 +285,11 @@ LTN_Omega (set_a ** ltn_a ** (tran_prf_a, wf_prf_a)) =
 --
 -- A natural lemma, and where we take advantage of the fact that the system
 -- does not see the non-well-foundedness.
+--
+-- I believe what's going on here is that the Omega on the right side is at
+-- a higher level than the one on the left side. I don't think there are
+-- any issues with the proof up to this point. The issue I think comes from
+-- the fact that, they get collapsed again in falsum.
 --
 Omega_LTN_Omega : LTN Omega_as_Omega Omega_as_Omega
 Omega_LTN_Omega = LTN_Omega Omega_as_Omega
